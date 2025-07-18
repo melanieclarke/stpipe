@@ -45,7 +45,7 @@ LOGLEVELS = (
     logging.DEBUG,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("stpipe.tests.test_logger")
 
 
 class LoggingStep(Step):
