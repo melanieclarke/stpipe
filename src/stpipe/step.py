@@ -39,7 +39,7 @@ from .format_template import FormatTemplate
 from .library import AbstractModelLibrary
 from .utilities import _not_set
 
-logger = logging.getLogger(log.STPIPE_ROOT_LOGGER)
+logger = logging.getLogger(__name__)
 
 
 class Step:
@@ -441,13 +441,12 @@ class Step:
         for key, val in kws.items():
             setattr(self, key, val)
 
-        # Create a new logger for this step
-        self.log = logging.getLogger(self.qualified_name)
-
-        self.log.setLevel(log.logging.DEBUG)
+        # For transition purposes, create and store a logger
+        # for this step.  If used, it will raise a DeprecationWarning.
+        self._log = logging.getLogger(self.qualified_name)
 
         # Log the fact that we have been init-ed.
-        self.log.info(
+        logger.info(
             "%s instance created.",
             self.__class__.__name__,
         )
@@ -475,11 +474,21 @@ class Step:
 
         for i, arg in enumerate(args):
             if isinstance(arg, discouraged_types):
-                self.log.error(
+                logger.error(
                     "%s %s object.  Use an instance of AbstractDataModel instead.",
                     msg,
                     i,
                 )
+
+    @property
+    def log(self):
+        msg = (
+            "The Step.log attribute is deprecated and will be "
+            "removed in a future release. "
+            "Please use a local logger, retrieved via logging.getLogger."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        return self._log
 
     @property
     def log_records(self):
@@ -507,10 +516,10 @@ class Step:
 
             step_result = None
 
-            self.log.info("Step %s running with args %s.", self.name, args)
+            logger.info("Step %s running with args %s.", self.name, args)
             # log Step or Pipeline parameters from top level only
             if self.parent is None:
-                self.log.info(
+                logger.info(
                     "Step %s parameters are:%s",
                     self.name,
                     # Add an indent to each line of the YAML output
@@ -550,11 +559,11 @@ class Step:
             self._check_args(args, DISCOURAGED_TYPES, "Passed")
             if self.parent is None:
                 if self.skip:
-                    self.log.info("Step run as standalone, so skip set to False")
+                    logger.info("Step run as standalone, so skip set to False")
                     self.skip = False
             # Run the Step-specific code.
             if self.skip:
-                self.log.info("Step skipped.")
+                logger.info("Step skipped.")
 
                 if self.class_alias is not None:
 
@@ -562,7 +571,7 @@ class Step:
                         try:
                             setattr(model.meta.cal_step, self.class_alias, "SKIPPED")
                         except AttributeError as e:
-                            self.log.info(
+                            logger.info(
                                 "Could not record skip into DataModel " "header: %s",
                                 e,
                             )
@@ -628,20 +637,20 @@ class Step:
                         try:
                             output_path = self.make_output_path(idx=idx)
                         except AttributeError:
-                            self.log.warning(
+                            logger.warning(
                                 "`save_results` has been requested, but cannot"
                                 " determine filename."
                             )
-                            self.log.warning(
+                            logger.warning(
                                 "Specify an output file with `--output_file` or set"
                                 " `--save_results=false`"
                             )
                         else:
-                            self.log.info("Saving file %s", output_path)
+                            logger.info("Saving file %s", output_path)
                             result.save(output_path, overwrite=True)
 
             if not self.skip:
-                self.log.info("Step %s done", self.name)
+                logger.info("Step %s done", self.name)
 
         return step_result
 
@@ -1026,9 +1035,9 @@ class Step:
                 try:
                     self._input_filename = obj.meta.filename
                 except AttributeError:
-                    self.log.debug(err_message)
+                    logger.debug(err_message)
             else:
-                self.log.debug(err_message)
+                logger.debug(err_message)
 
     def save_model(
         self,
@@ -1118,7 +1127,7 @@ class Step:
                     **components,
                 )
             )
-            self.log.info("Saved model in %s", output_path)
+            logger.info("Saved model in %s", output_path)
 
         return output_path
 
@@ -1388,7 +1397,7 @@ class Step:
                     for step_name, step_parameters in value.items():
                         getattr(self, step_name).update_pars(step_parameters)
             else:
-                self.log.debug(
+                logger.debug(
                     "Parameter %s is not valid for step %s. Ignoring.", parameter, self
                 )
 

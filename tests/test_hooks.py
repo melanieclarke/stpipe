@@ -1,8 +1,12 @@
+import logging
+
 import asdf
 import pytest
 
 from stpipe.pipeline import Pipeline
 from stpipe.step import Step
+
+logger = logging.getLogger(__name__)
 
 
 class FakeDataModel:
@@ -44,7 +48,7 @@ class ShovelPixelsStep(FakeStep):
     class_alias = "shovelpixels"
 
     def process(self, input_data):
-        self.log.info("Shoveling...")
+        logger.info("Shoveling...")
         return input_data
 
 
@@ -52,7 +56,7 @@ class CancelNoiseStep(FakeStep):
     class_alias = "cancelnoise"
 
     def process(self, input_data):
-        self.log.info("De-noising...")
+        logger.info("De-noising...")
         return input_data
 
 
@@ -66,7 +70,7 @@ class HookStep(FakeStep):
     """
 
     def process(self, input_data):
-        self.log.info("Running HookStep with %s and %s", self.param1, self.param2)
+        logger.info("Running HookStep with %s and %s", self.param1, self.param2)
 
         return input_data
 
@@ -122,7 +126,6 @@ def test_hook_as_step_class(hook_type, caplog, disable_crds_steppars):
     MyPipeline.call(model, steps=steps)
 
     assert "Running HookStep with bar and 1" in caplog.text
-    assert "cancelnoise.myhook" in caplog.text
 
 
 @pytest.mark.parametrize("hook_type", ["pre_hooks", "post_hooks"])
